@@ -6,7 +6,7 @@
     "firebase-functions": "^6.4.0"
   },
   "scripts": {
-    "build": "tsc && xcopy prompts lib\\prompts /E /I /Y"
+    "build": "tsc && node scripts/copy-assets.js"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
