@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "outDir": "./lib",                              /* Redirect output structure to the directory. */
-    "rootDir": "./",                                /* Specify the root folder within your source files. */
-
+    "rootDir": "./",
+    "target" : "es2021",
+    "lib" : ["es2021", "dom"],                                /* Specify the root folder within your source files. */
     /* Language and Environment */
-    "target": "es2016",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     // "lib": [],                                        /* Specify a set of bundled library declaration files that describe the target runtime environment. */
     // "jsx": "preserve",                                /* Specify what JSX code is generated. */
     // "libReplacement": true,                           /* Enable lib replacement. */
@@ -17,7 +17,6 @@
     // "noLib": true,                                    /* Disable including any library files, including the default lib.d.ts. */
     // "useDefineForClassFields": true,                  /* Emit ECMAScript-standard-compliant class fields. */
     // "moduleDetection": "auto",                        /* Control what method is used to detect module-format JS files. */
-
     /* Modules */
     "module": "commonjs",                                /* Specify what module code is generated. */
     // "rootDir": "./",                                  /* Specify the root folder within your source files. */
