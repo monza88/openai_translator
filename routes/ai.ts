@@ -5,7 +5,7 @@ import { sendToWebhook } from "../services/webhook";
 const router = express.Router();
 
 //Post /ai/process
-router.post("/process", async (req, res) => {
+router.post("/process", async (req , res) => {
     try {
         const { prompt, webhookUrl } = req.body;
 

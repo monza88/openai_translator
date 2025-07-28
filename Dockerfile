@@ -21,5 +21,4 @@ RUN npm run build
 ENV PORT=8080
 
 # Start the application
-CMD ["npm", "run", "build"]
 CMD ["node", "lib/index.js"]
