@@ -13,7 +13,7 @@ router.post("/process", async (req, res) => {
             return res.status(400).json({ error: "Missing prompt or webhookUrl" });
         }
 
-        const aiResponse = await.sendToOpenAI(prompt);
+        const aiResponse = await sendToOpenAI(prompt);
         await sendToWebhook(webhookUrl, { result: aiResponse });
 
         res.status(200).json({ status: "OK", forwarded: true });
