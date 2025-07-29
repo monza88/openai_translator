@@ -3,10 +3,7 @@
 type TranslationPayload = {
     batchId: string;
     isLastBatch: boolean;
-    translations : {
-        lang : string;
-        content : Record<string, string>; // Key-value 객체 형태
-    }[]
+    translations : Record<string, Record<string, string>>;
 };
 
 export async function sendToWebhook(callbackUrl : string, payload : TranslationPayload): Promise<void> {

@@ -39,7 +39,8 @@ Respond only with the revised output unless asked to explain.
 
 ##################Final request##################
 - don't write any of additional text based on GPT's suggestion (ex: Tag:, note : ) in the text data.
-- your output text must be only { key, text} as a result.
+- your output text must be only { key, text } as a result.
+- IGNORE 'type' DATA YOU GOT FROM INPUT TEXT (USER INPUT) ** NEVER CONTAIN IT AS A RESULT
 - you must separate text line based on [row] data.
 example :
 key_id1, text1

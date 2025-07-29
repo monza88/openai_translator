@@ -2,9 +2,10 @@
 import { sendToOpenAI } from "../services/openai";
 import { sendToWebhook } from "../services/webhook";
 import { saveGptDebugLogs } from "../utils/logger";
-import { saveTranslationsLog } from "../utils/logger";
+import { saveTranslationsToFile } from '../utils/logger';
 import fs from "fs";
 import path from "path";
+import { send } from 'process';
 
 const router = express.Router();
 
@@ -51,36 +52,42 @@ router.post("/batch-translate", async (req, res) => {
         //여러 언어에 대해 번역 결과를 콜백 URL로 전송
         await Promise.all(
             Object.entries(batchGroups).map(async ([batchId, batchData]) => {
-                const translationTasks = languages.map(async (lang: string) => {
-                    //각 언어 별로 번역할 텍스트를 하나의 프롬프트로 전달
-                    const inputText = batchData.map(row => `${row.key}, ${row.type}, ${row.text}`).join("\n");
-                    const prompt = systemPrompt.replaceAll("{{language_code}}", lang);
-                    
-                    const gptResult = await sendToOpenAI(inputText, prompt);
-                    //번역 결과를 키-값 쌍으로 변환
-                    const translationMap = parseTranslationTextToMap(gptResult);
-                    
-                    console.log("🧪 saveGptDebugLogs() 호출 전");
-                    saveGptDebugLogs(batchId, lang, prompt, gptResult, translationMap);
-                    console.log("✅ saveGptDebugLogs() 호출 완료");
-                    return { lang, content: translationMap };
-                });
+                const translations : { [lang : string] : Record<string, string> } = {};
 
-                const translations = await Promise.all(translationTasks);
-                console.log("📝 saveTranslationsLog() 호출 전");
-                saveTranslationsLog(batchId, Object.fromEntries(translations.map(t => [t.lang, t.content])));
-                console.log("✅ saveTranslationsLog() 호출 완료");
+                await Promise.all(
+                    languages.map(async (lang:string) => {
+                        const inputText = batchData.map(row => {
+                            if(Array.isArray(row)) {
+                                return `${row[0]}, ${row[1]}, ${row[2]}`; //배열 형태로 가정
+                            } else {
+                                return `${row.key}, ${row.type}, ${row.text}`; //객체 형태로 가정
+                            }
+                        }).join("\n");
 
-                //콜백 URL로 번역 결과 전송
+                        const prompt = systemPrompt.replaceAll("{{language_code}}", lang);
+                        const gptResult = await sendToOpenAI(inputText, prompt);
+                        const translationMap = parseTranslationTextToMap(gptResult);
+
+                        saveGptDebugLogs(batchId, lang, prompt, gptResult, translationMap);
+
+                        translations[lang] = translationMap;
+                        console.log(`✅ ${lang} 번역 완료:`, translationMap);
+                    })
+                );
+
+                saveTranslationsToFile(batchId, translations);
+                //번역 결과를 콜백 URL로 전송
+                console.log(`📤 콜백 URL로 번역 결과 전송: ${callbackUrl}`);
                 await sendToWebhook(callbackUrl, {
                     batchId,
                     isLastBatch,
-                    translations,
+                    translations
                 });
             })
         );
-
         res.status(200).json({ status: "OK", forwarded: true });
+        console.log("✅ 배치 번역 완료:", batchId, isLastBatch, languages);
+
     } catch (err) {
         console.error("Error in /ai/batch-translate", err);
         res.status(500).json({ error: "Internal Server Error" });
@@ -88,16 +95,24 @@ router.post("/batch-translate", async (req, res) => {
 });
 
 function parseTranslationTextToMap(text : string) :Record<string, string> {
+    const lines = text.split("\n").filter(line => line.trim() !== "");
     const map : Record<string, string> = {};
-    const lines = text.split("\n");
+    
+    const allowedTypes = [
+        "label", "desc", "title", "radio", "checkbox",
+        "btn", "toggle", "option", "dropdown", "etc"
+    ];
 
     for(const line of lines) {
-        const trimed = line.trim();
-        if(!trimed) continue; //빈 줄 무시
+        const [keyPart, ...rest] = line.split(",");
+        const key = keyPart.trim();
+        const valueRaw = rest.join(",").trim();
+        const typeRegex = new RegExp(`^(${allowedTypes.join("|")})\\s*:,?\\s*`, "i");
         
-        const [key, ...rest] = trimed.split(",");
-        if(key && rest.length > 0) {
-            map[key.trim()] = rest.join(",").trim(); //콤마 포함된 텍스트 대응
+        const value = valueRaw.replace(typeRegex, "").trim();
+
+        if(key && value) {
+            map[key] = value;
         }
     }
 

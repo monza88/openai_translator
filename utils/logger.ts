@@ -38,9 +38,9 @@ export function saveGptDebugLogs(
     }
 }
 
-export function saveTranslationsLog(
-    batchId: string,
-    translations: Record<string, string>
+export function saveTranslationsToFile (
+    batchId : string,
+    translations : Record<string, Record<string, string>>
 ) {
     if (!DEBUG_LOG) {
         return; // 디버그 로그가 비활성화된 경우 함수 종료
@@ -48,11 +48,11 @@ export function saveTranslationsLog(
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-'); // ISO 8601 형식의 타임스탬프 생성
     const fileName = `${timestamp}-${batchId}-translations.json`;
-
+    const filePath = path.join(logDir, fileName);
     try {
-        fs.writeFileSync(path.join(logDir, fileName), JSON.stringify(translations, null, 2), 'utf8');
-        console.log(`Translations log saved for batch ${batchId}`);
+        fs.writeFileSync(filePath, JSON.stringify(translations, null, 2), 'utf8');
+        console.log(`✅Objects wrote as a file ${filePath}`);
     } catch (error) {
-        console.error(`Error saving translations log for batch ${batchId}:`, error);
+        console.error(`🔥Error saving translations to file:`, error);
     }
 }
