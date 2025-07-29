@@ -101,7 +101,7 @@ function parseTranslationTextToMap(text : string) :Record<string, string> {
     
     const allowedTypes = [
         "label", "desc", "title", "radio", "checkbox",
-        "btn", "toggle", "option", "dropdown", "etc"
+        "btn", "toggle", "option", "dropdown", "etc", "sequence"
     ];
 
     for(const line of lines) {
