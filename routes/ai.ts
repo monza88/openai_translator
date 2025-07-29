@@ -6,25 +6,6 @@ import path from "path";
 
 const router = express.Router();
 
-//Post /ai/process
-router.post("/process", async (req , res) => {
-    try {
-        const { prompt, webhookUrl } = req.body;
-
-        if (!prompt || !webhookUrl) {
-            return res.status(400).json({ error: "Missing prompt or webhookUrl" });
-        }
-
-        const aiResponse = await sendToOpenAI(prompt);
-        await sendToWebhook(webhookUrl, { result: aiResponse });
-
-        res.status(200).json({ status: "OK", forwarded: true });
-    } catch (err) {
-        console.error("Error in /ai/process", err);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
-
 router.post("/batch-translate", async (req, res) => {
     console.log("REQ BODY", req.body);
     try {
@@ -62,8 +43,12 @@ router.post("/batch-translate", async (req, res) => {
                     //각 언어 별로 번역할 텍스트를 하나의 프롬프트로 전달
                     const inputText = batchData.map(row => `${row.key}, ${row.text}`).join("\n");
                     const prompt = systemPrompt.replaceAll("{{language_code}}", lang) + `\n\n ${inputText}`;
+                    
                     const gptResult = await sendToOpenAI(prompt);
-                    return { lang, content: gptResult };
+                    //번역 결과를 키-값 쌍으로 변환
+                    const translationMap = parseTranslationTextToMap(gptResult);
+
+                    return { lang, content: translationMap };
                 });
 
                 const translations = await Promise.all(translationTasks);
@@ -83,5 +68,22 @@ router.post("/batch-translate", async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
+
+function parseTranslationTextToMap(text : string) :Record<string, string> {
+    const map : Record<string, string> = {};
+    const lines = text.split("\n");
+
+    for(const line of lines) {
+        const trimed = line.trim();
+        if(!trimed) continue; //빈 줄 무시
+        
+        const [key, ...rest] = trimed.split(",");
+        if(key && rest.length > 0) {
+            map[key.trim()] = rest.join(",").trim(); //콤마 포함된 텍스트 대응
+        }
+    }
+
+    return map;
+}
 
 export default router;

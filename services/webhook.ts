@@ -1,26 +1,29 @@
 ﻿import axios from "axios";
 
+type TranslationPayload = {
+    batchId: string;
+    isLastBatch: boolean;
+    translations : {
+        lang : string;
+        content : Record<string, string>; // Key-value 객체 형태
+    }[]
+};
 
-export async function sendToWebhook(url: string, data: any): Promise<void> {
+export async function sendToWebhook(callbackUrl : string, payload : TranslationPayload): Promise<void> {
     try {
-        const response = await axios.post(url, data, {
+        const response = await axios.post(callbackUrl, payload, {
             headers: {
                 "Content-Type": "application/json",
             },
+            timeout : 10000, // 10초 타임아웃 설정
         });
-        console.log('webhook sent :', response.status);
-    } catch (error : unknown) {
-        if(typeof error === "object" && error !== null && "response" in error){
-            const err = error as any;
-            const status = err.response?.status;
-            const statusText = err.response?.statusText;
-            const responseData = err.response?.data;
-            
-            console.error(`Webhook request failed: ${status} ${statusText} - `, responseData);
-            throw new Error(`Webhook request failed with status ${status}`);
-        } else {
-            console.error("Unexpected error in sendToWebhook:", error);
-            throw new Error("Unexpected error occurred while sending webhook");
+
+        if (response.status !== 200) {
+            throw new Error(`Webhook request failed with status ${response.status}`);
         }
+        console.log("Webhook request successful:", response.data);
+    } catch (error) {
+        console.error("Error sending to webhook:", error);
+        throw new Error(`Failed to send to webhook: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
