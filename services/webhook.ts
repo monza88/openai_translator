@@ -3,6 +3,7 @@
 type TranslationPayload = {
     batchId: string;
     isLastBatch: boolean;
+    sheetName : string;
     translations : Record<string, Record<string, string>>;
 };
 
@@ -18,9 +19,9 @@ export async function sendToWebhook(callbackUrl : string, payload : TranslationP
         if (response.status !== 200) {
             throw new Error(`Webhook request failed with status ${response.status}`);
         }
-        console.log("Webhook request successful:", response.data);
+        //console.log("Webhook request successful:", response.data);
     } catch (error) {
-        console.error("Error sending to webhook:", error);
+        //console.error("Error sending to webhook:", error);
         throw new Error(`Failed to send to webhook: ${error instanceof Error ? error.message : String(error)}`);
     }
 }

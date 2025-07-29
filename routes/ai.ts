@@ -12,7 +12,7 @@ const router = express.Router();
 router.post("/batch-translate", async (req, res) => {
     console.log("REQ BODY", req.body);
     try {
-        const { data, batchId, isLastBatch, languages, callbackUrl , promptFile} = req.body;
+        const { data, batchId, isLastBatch, languages, sheetName,  callbackUrl , promptFile} = req.body;
         
         let systemPrompt = "";
         if(promptFile) {
@@ -23,7 +23,7 @@ router.post("/batch-translate", async (req, res) => {
                  }
 
                 systemPrompt = fs.readFileSync(filePath, 'utf8');
-                console.log("✅ 시스템 프롬프트 로드 완료:", filePath);
+                //console.log("✅ 시스템 프롬프트 로드 완료:", filePath);
 
             } catch (error) {
                 console.error("Error reading prompt file:", error);
@@ -71,25 +71,26 @@ router.post("/batch-translate", async (req, res) => {
                         saveGptDebugLogs(batchId, lang, prompt, gptResult, translationMap);
 
                         translations[lang] = translationMap;
-                        console.log(`✅ ${lang} 번역 완료:`, translationMap);
+                        //console.log(`✅ ${lang} 번역 완료:`, translationMap);
                     })
                 );
 
                 saveTranslationsToFile(batchId, translations);
                 //번역 결과를 콜백 URL로 전송
-                console.log(`📤 콜백 URL로 번역 결과 전송: ${callbackUrl}`);
+                //console.log(`📤 콜백 URL로 번역 결과 전송: ${callbackUrl}`);
                 await sendToWebhook(callbackUrl, {
                     batchId,
                     isLastBatch,
+                    sheetName,
                     translations
                 });
             })
         );
         res.status(200).json({ status: "OK", forwarded: true });
-        console.log("✅ 배치 번역 완료:", batchId, isLastBatch, languages);
+        //console.log("✅ 배치 번역 완료:", batchId, isLastBatch, languages);
 
     } catch (err) {
-        console.error("Error in /ai/batch-translate", err);
+        //console.error("Error in /ai/batch-translate", err);
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
@@ -107,7 +108,7 @@ function parseTranslationTextToMap(text : string) :Record<string, string> {
         const [keyPart, ...rest] = line.split(",");
         const key = keyPart.trim();
         const valueRaw = rest.join(",").trim();
-        const typeRegex = new RegExp(`^(${allowedTypes.join("|")})\\s*:,?\\s*`, "i");
+        const typeRegex = new RegExp(`^(${allowedTypes.join("|")})\\s*,?\\s*`, "i");
         
         const value = valueRaw.replace(typeRegex, "").trim();
 
