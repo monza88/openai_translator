@@ -1,8 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const src = path.resolve(__dirname, "../prompts");
-const dest = path.resolve(__dirname, "../lib/prompts");
+const src = path.resolve(process.cwd(), "prompts");
+const dest = path.resolve(process.cwd(), "lib/prompts");
+
+if(!fs.existsSync(src)) {
+    console.error(`Source directory does not exist: ${src}`);
+    process.exit(0);
+}
 
 fs.rmSync(dest, { recursive: true, force: true });
 fs.mkdirSync(dest, { recursive: true });
