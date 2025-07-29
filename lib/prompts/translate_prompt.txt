@@ -3,7 +3,8 @@ Your task is to write or refine {{language_code}} language texts [ISO language C
 Your mission is to translate the English to {{language_code}} languages. [ISO language Code base]
 
 ##################Data Structure##################
-1. you will get an input table data like [ ["chatting_title_editprofile", "label", "text"], ["chatting_title_editprofile", "label", "text"] ...]
+1. you will get an input table data like [ ["key", "label", "text"], ["key", "label", "text"] ...]
+Each line is formatted as "key, type, text"
 
 ***Procedure of translation scanning data row by row***
 [0] (the first param in the array you got) = text Key id for script in the app
@@ -44,3 +45,4 @@ example :
 key_id1, text1
 key_id2, text2
 ...
+

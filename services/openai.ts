@@ -8,14 +8,19 @@ interface OpenAIChatResponse {
     }[];
 }
 
-export async function sendToOpenAI(prompt: string): Promise<string> {
+export async function sendToOpenAI(inputText:string, systemPrompt: string): Promise<string> {
     const apiKey = process.env.OPENAI_API_KEY;
 
     const response = await axios.post<OpenAIChatResponse>(
         "https://api.openai.com/v1/chat/completions",
         {
             model: "gpt-4",
-            messages: [{ role : "user", content : prompt }],
+            messages: [
+                { role : "user", content : inputText },
+                { role: "system", content: systemPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 2048,
         },
         {
             headers: {

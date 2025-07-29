@@ -1,6 +1,8 @@
 ﻿import express from 'express';
 import { sendToOpenAI } from "../services/openai";
 import { sendToWebhook } from "../services/webhook";
+import { saveGptDebugLogs } from "../utils/logger";
+import { saveTranslationsLog } from "../utils/logger";
 import fs from "fs";
 import path from "path";
 
@@ -13,8 +15,18 @@ router.post("/batch-translate", async (req, res) => {
         
         let systemPrompt = "";
         if(promptFile) {
-            const filePath = path.join(__dirname, "../prompts", promptFile);
-            systemPrompt = fs.readFileSync(filePath, "utf-8");
+            try {
+                const filePath = path.resolve(process.cwd(), "prompts", promptFile);
+                 if (!fs.existsSync(filePath)) {
+                    console.error("❌ 파일이 존재하지 않음:", filePath);
+                 }
+
+                systemPrompt = fs.readFileSync(filePath, 'utf8');
+                console.log("✅ 시스템 프롬프트 로드 완료:", filePath);
+
+            } catch (error) {
+                console.error("Error reading prompt file:", error);
+            }
         }      
 
         if (!data || !Array.isArray(data) || data.length === 0) {
@@ -41,17 +53,23 @@ router.post("/batch-translate", async (req, res) => {
             Object.entries(batchGroups).map(async ([batchId, batchData]) => {
                 const translationTasks = languages.map(async (lang: string) => {
                     //각 언어 별로 번역할 텍스트를 하나의 프롬프트로 전달
-                    const inputText = batchData.map(row => `${row.key}, ${row.text}`).join("\n");
-                    const prompt = systemPrompt.replaceAll("{{language_code}}", lang) + `\n\n ${inputText}`;
+                    const inputText = batchData.map(row => `${row.key}, ${row.type}, ${row.text}`).join("\n");
+                    const prompt = systemPrompt.replaceAll("{{language_code}}", lang);
                     
-                    const gptResult = await sendToOpenAI(prompt);
+                    const gptResult = await sendToOpenAI(inputText, prompt);
                     //번역 결과를 키-값 쌍으로 변환
                     const translationMap = parseTranslationTextToMap(gptResult);
-
+                    
+                    console.log("🧪 saveGptDebugLogs() 호출 전");
+                    saveGptDebugLogs(batchId, lang, prompt, gptResult, translationMap);
+                    console.log("✅ saveGptDebugLogs() 호출 완료");
                     return { lang, content: translationMap };
                 });
 
                 const translations = await Promise.all(translationTasks);
+                console.log("📝 saveTranslationsLog() 호출 전");
+                saveTranslationsLog(batchId, Object.fromEntries(translations.map(t => [t.lang, t.content])));
+                console.log("✅ saveTranslationsLog() 호출 완료");
 
                 //콜백 URL로 번역 결과 전송
                 await sendToWebhook(callbackUrl, {

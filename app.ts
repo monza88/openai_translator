@@ -1,6 +1,5 @@
 import express from 'express';
-import aiRoutes from './routes/ai';
-import 'dotenv/config'; // 환경 변수 로드
+import batchTranslate from './routes/ai';
 
 const app = express();
 
@@ -9,7 +8,8 @@ app.get("/", (req, res) => {
 });
 
 app.use(express.json()); //JSON 파싱 미들웨어
-app.use("/ai", aiRoutes); //ai 경로 등록
+app.use("/ai", batchTranslate); //ai 경로 등록
+
 
 export default app;
 
