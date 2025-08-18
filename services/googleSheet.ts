@@ -10,6 +10,7 @@ const auth = new google.auth.GoogleAuth({
 });
 
 export const getSheetData = async (sheetName : string, startRow = 1):Promise<Record<string,string>[]> => {
+    const client = await auth.getClient();
     const sheets = google.sheets( { version : 'v4', auth} );
     const sheetId = process.env.MASTER_SHEET_ID!;
     const response = await sheets.spreadsheets.values.get({
@@ -38,6 +39,7 @@ export const updateSheetData = async (
     startRow : number,
     jsonData : Record<string, string>[]
 ) => {
+    const client = await auth.getClient();
     const sheets = google.sheets( { version : 'v4', auth} );
     const sheetId = process.env.MASTER_SHEET_ID!;
     
@@ -60,8 +62,6 @@ export const updateSheetData = async (
         requestBody : { values }
     });
 
-    console.log("▶ update response", response.data);
-
     return {
         message :`✅ ${sheetName} 시트 ${startCell}부터 ${values.length}행 덮어쓰기 완료`,
         updatedRange : response.data.updatedRange
@@ -72,6 +72,7 @@ export const appendSheetData = async (
     sheetName : string,
     jsonData : Record<string, string>[]
 ) => {
+    const client = await auth.getClient();
     const sheets = google.sheets( { version : 'v4', auth} );
     const sheetId = process.env.MASTER_SHEET_ID!;
     

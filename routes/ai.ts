@@ -71,8 +71,6 @@ router.post("/batch-translate", async (req, res) => {
                 const mergeRows = await mergeSheetData(sheetName, translations);
                 await updateSheetData(sheetName, 1, mergeRows);
                 console.log(`✅${sheetName} 번역처리 완료`, translations);
-
-                saveTranslationsToFile(batchId, translations);
             })
         );
         res.status(200).json({ status: "OK", forwarded: true });
