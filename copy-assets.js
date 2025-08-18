@@ -1,29 +1,31 @@
 const fs = require('fs');
 const path = require('path');
 
-const src = path.resolve(process.cwd(), "prompts");
-const dest = path.resolve(process.cwd(), "lib/prompts");
+function copyDir(srcDir, destDir) {
+    if(!fs.existsSync(srcDir)) {
+        console.error(`❌Source directory does not exist: ${srcDir}`);
+        return;
+    }
 
-if(!fs.existsSync(src)) {
-    console.error(`Source directory does not exist: ${src}`);
-    process.exit(0);
+    fs.rmSync(destDir, { recursive : true, force : true});
+    fs.mkdirSync(destDir, {recursive : true});
+
+    fs.readdirSync(srcDir).forEach((file) => {
+        const srcFile = path.join(srcDir, file);
+        const destFile = path.join(destDir, file);
+
+        if(fs.lstatSync(srcFile).isDirectory()) {
+            copyDir(srcFile, destFile);
+        } else {
+            fs.copyFileSync(srcFile, destFile);
+            console.log(`📄 Copied: ${srcFile} → ${destFile}`);
+        }
+    });
 }
 
-fs.rmSync(dest, { recursive: true, force: true });
-fs.mkdirSync(dest, { recursive: true });
+// ✅ prompts 복사
+const promptSrc = path.resolve("./prompts");
+const promptDest = path.resolve("lib/prompts");
+copyDir(promptSrc, promptDest);
 
-fs.readdirSync(src).forEach(file => {
-    const srcFile = path.join(src, file);
-    const destFile = path.join(dest, file);
-    
-    if (fs.lstatSync(srcFile).isDirectory()) {
-        fs.mkdirSync(destFile, { recursive: true });
-        fs.readdirSync(srcFile).forEach(subFile => {
-            fs.copyFileSync(path.join(srcFile, subFile), path.join(destFile, subFile));
-        });
-    } else {
-        fs.copyFileSync(srcFile, destFile);
-    }
-});
-
-console.log(`Assets copied from ${src} to ${dest}`);
+console.log("✅ Assets copied successfully!");

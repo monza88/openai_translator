@@ -1,25 +1,20 @@
 ﻿import express from 'express';
 import { sendToOpenAI } from "../services/openai";
-import { sendToWebhook } from "../services/webhook";
 import { saveGptDebugLogs } from "../utils/logger";
 import { saveTranslationsToFile } from '../utils/logger';
+import { getSheetData, updateSheetData } from '../services/googleSheet';   
 import fs from "fs";
 import path from "path";
-import { send } from 'process';
 
 const router = express.Router();
 
 router.post("/batch-translate", async (req, res) => {
     console.log("REQ BODY", req.body);
     try {
-        const { data, languages, sheetName,  callbackUrl , promptFile} = req.body;
+        const { data, languages, sheetName , promptFile} = req.body;
 
         if(!data || !Array.isArray(data) || data.length === 0) { 
             return res.status(400).json({ error: "Invalid data format" });
-        }
-
-        if (!callbackUrl) {
-            return res.status(400).json({ error: "Missing callbackUrl" });
         }
         
         let systemPrompt = "";
@@ -69,23 +64,18 @@ router.post("/batch-translate", async (req, res) => {
                         saveGptDebugLogs(batchId, lang, prompt, gptResult, translationMap);
 
                         translations[lang] = translationMap;
-                        //console.log(`✅ ${lang} 번역 완료:`, translationMap);
+                        console.log(`✅ ${lang} 번역 완료:`, translationMap);
                     })
                 );
 
+                const mergeRows = await mergeSheetData(sheetName, translations);
+                await updateSheetData(sheetName, 1, mergeRows);
+                console.log(`✅${sheetName} 번역처리 완료`, translations);
+
                 saveTranslationsToFile(batchId, translations);
-                //번역 결과를 콜백 URL로 전송
-                //console.log(`📤 콜백 URL로 번역 결과 전송: ${callbackUrl}`);
-                await sendToWebhook(callbackUrl, {
-                    batchId,
-                    isLastBatch,
-                    sheetName,
-                    translations
-                });
             })
         );
         res.status(200).json({ status: "OK", forwarded: true });
-        //console.log("✅ 배치 번역 완료:", batchId, isLastBatch, languages);
 
     } catch (err) {
         //console.error("Error in /ai/batch-translate", err);
@@ -116,6 +106,30 @@ function parseTranslationTextToMap(text : string) :Record<string, string> {
     }
 
     return map;
+}
+
+async function mergeSheetData(
+    sheetName : string, 
+    newTranslations : Record<string, Record<string, string>>
+) :Promise<Record<string, string>[]> {
+    const existngRows = await getSheetData(sheetName);
+
+    // 2. key 기준 map
+    const rowMap = new Map<string, Record<string, string>>();
+    existngRows.forEach(row => {
+        rowMap.set(row.key, {...row});
+    });
+
+    // 3. 병합
+    Object.entries(newTranslations).forEach(([lang, langMap]) => {
+        Object.entries(langMap).forEach(([key, text]) => {
+            const existing = rowMap.get(key) || { key };
+            existing[lang] = text;
+            rowMap.set(key, existing);
+        });
+    });
+
+    return Array.from(rowMap.values());
 }
 
 export default router;
