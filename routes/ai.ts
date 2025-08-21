@@ -11,12 +11,13 @@ const router = express.Router();
 router.post("/batch-translate", async (req, res) => {
     console.log("REQ BODY", req.body);
     try {
-        const { data, languages, sheetName , promptFile} = req.body;
+        const { data, languages, sheetName, sheetId , promptFile} = req.body;
 
-        if(!data || !Array.isArray(data) || data.length === 0) { 
+        if(!data || !Array.isArray(data) || data.length === 0 || sheetId === "" || sheetName === "") { 
             return res.status(400).json({ error: "Invalid data format" });
         }
-        
+        console.log(`targetSheet : ${sheetName} \n FileId : ${sheetId}`);
+
         let systemPrompt = "";
         if(promptFile) {
             try {
@@ -40,14 +41,14 @@ router.post("/batch-translate", async (req, res) => {
         const batches = Array.from({ length : totalBatches }, (_, i) => 
             data.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE)
         );
-
+        
+        const translations : { [lang : string] : Record<string, string> } = {};
         //각 배치 그룹에 대해 OpenAI로 번역 요청
         //여러 언어에 대해 번역 결과를 콜백 URL로 전송
         await Promise.all(
             batches.map(async (batchData, index) => {
                 const batchId = `${baseBatchId}-bacth${index}`;
                 const isLastBatch = index === totalBatches - 1;
-                const translations : { [lang : string] : Record<string, string> } = {};
 
                 await Promise.all(
                     languages.map(async (lang:string) => {
@@ -68,11 +69,11 @@ router.post("/batch-translate", async (req, res) => {
                     })
                 );
 
-                const mergeRows = await mergeSheetData(sheetName, translations);
-                await updateSheetData(sheetName, 1, mergeRows);
-                console.log(`✅${sheetName} 번역처리 완료`, translations);
+                const mergeRows = await mergeSheetData(sheetId, sheetName, translations);
+                await updateSheetData(sheetId, sheetName, 2, mergeRows);
             })
         );
+        
         res.status(200).json({ status: "OK", forwarded: true });
 
     } catch (err) {
@@ -107,10 +108,11 @@ function parseTranslationTextToMap(text : string) :Record<string, string> {
 }
 
 async function mergeSheetData(
+    sheetId : string,
     sheetName : string, 
     newTranslations : Record<string, Record<string, string>>
 ) :Promise<Record<string, string>[]> {
-    const existngRows = await getSheetData(sheetName);
+    const existngRows = await getSheetData(sheetId, sheetName);
 
     // 2. key 기준 map
     const rowMap = new Map<string, Record<string, string>>();

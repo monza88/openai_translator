@@ -2,17 +2,11 @@ import { google } from 'googleapis';
 
 // ✅ 1. 인증 객체 생성 (서비스 계정용)
 const auth = new google.auth.GoogleAuth({
-    credentials : {
-        client_email : process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key : process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    },
     scopes : ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
-export const getSheetData = async (sheetName : string, startRow = 1):Promise<Record<string,string>[]> => {
-    const client = await auth.getClient();
+export const getSheetData = async (sheetId : string, sheetName : string, startRow = 1):Promise<Record<string,string>[]> => {
     const sheets = google.sheets( { version : 'v4', auth} );
-    const sheetId = process.env.MASTER_SHEET_ID!;
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId : sheetId,
         range : sheetName
@@ -35,13 +29,12 @@ export const getSheetData = async (sheetName : string, startRow = 1):Promise<Rec
 };
 
 export const updateSheetData = async (
+    sheetId : string,
     sheetName : string,
     startRow : number,
     jsonData : Record<string, string>[]
 ) => {
-    const client = await auth.getClient();
     const sheets = google.sheets( { version : 'v4', auth} );
-    const sheetId = process.env.MASTER_SHEET_ID!;
     
     // ✅ 헤더 추출
     const headers = Object.keys(jsonData[0]);
@@ -51,8 +44,6 @@ export const updateSheetData = async (
     // ✅ 시작 범위 지정
     const startCell = `A${startRow}`;
     const range = `${sheetName}!${startCell}`;
-
-    console.log("▶ updateSheetData called", { range, values });
     
     
     const response = await sheets.spreadsheets.values.update({
@@ -69,12 +60,11 @@ export const updateSheetData = async (
 };
 
 export const appendSheetData = async (
+    sheetId : string,
     sheetName : string,
     jsonData : Record<string, string>[]
 ) => {
-    const client = await auth.getClient();
     const sheets = google.sheets( { version : 'v4', auth} );
-    const sheetId = process.env.MASTER_SHEET_ID!;
     
     // ✅ 헤더 추출
     const headers = Object.keys(jsonData[0]);
